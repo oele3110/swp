@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Read out CSV</title>
+	</head>
+	<style>
+        table, tr {
+            border: 1px solid black;
+        }
+        td, tr {
+            padding: 5px;
+        }
+        th {
+            background-color: black;
+            color: white;
+            padding: 5px;
+        }
+	</style>
+	<body>
+		<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+		<script type="text/javascript">
+
+			d3.text("data.csv", createTable);
+
+            // useful methods
+            function createTable(rawData) {
+
+				// parse csv
+            	var data = d3.csv.parseRows(rawData);
+				
+				// table
+                var table = d3.select("body").append("table"),
+                    thead = table.append("thead"),
+                    tbody = table.append("tbody");
+
+                // header
+                thead.append("tr")
+                	.selectAll("th")
+                	.data(data[0])
+                    .enter().append("th")
+                    .text(function(d) {return d;});
+
+                // rows
+                var row = tbody.selectAll("tr")
+                    .data(data.slice(1))
+                    .enter().append("tr");
+
+                // cells
+                var cells = row.selectAll("td")
+                	.data(function(d) {return d;})
+                	.enter().append("td")
+                	.text(function(d) {return d;})
+                	.on("mouseover", function(){d3.select(this).style("background-color", "lightblue")})
+    				.on("mouseout", function(){d3.select(this).style("background-color", "white")});
+            }
+
+		</script>
+    </body>
+</html>
