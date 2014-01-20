@@ -83,10 +83,36 @@ def main(update, withdrawal):
 		for k in i["as_path"]:
 		  path.append(str(k.childNodes[0].data))
 		#print j["address"] + " " + j["len"] + " " + i["origin_as"]# + " " + str(i["update"]) + " " + str(i["withdrawal"]) + " " + str(i["count"])# +"\t" + string.join(path, ",")
+		# example output
+		# BGP4MP|03/15/12 11:45:28|A|198.32.124.146|25152|2.92.137.0/24|25152 6939 3216 8402|IGP
+		
+		# update
 		if i["count"] == 0:
-			print j["address"] + " " + j["len"] + " " + i["origin_as"] + " update"
+			path = ""
+			
+			counter = 0
+			for node in i["as_path"]:
+				#if str(node.childNodes[0].data) != i["origin_as"]:
+				path = str(node.childNodes[0].data) + path
+				if counter != (len(i["as_path"])-1):
+					path = " " + path
+				counter += 1
+			
+			#print j["address"] + " " + j["len"] + " " + i["origin_as"] + " update " + path
+			print "BGP4MP|01/01/01 00:00:00|A|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP"
+			
+		# withdrawn
 		if i["count"] > 0:
-			print j["address"] + " " + j["len"] + " " + i["origin_as"] + " withdrawn"
+			path = ""
+			counter = 0
+			for node in i["as_path"]:
+				#if str(node.childNodes[0].data) != i["origin_as"]:
+				path = str(node.childNodes[0].data) + path
+				if counter != (len(i["as_path"])-1):
+					path = " " + path
+				counter += 1
+			#print j["address"] + " " + j["len"] + " " + i["origin_as"] + " withdrawn " + path
+			print "BGP4MP|01/01/01 00:00:00|W|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP"
 			
 	  msg += str(data)
 
