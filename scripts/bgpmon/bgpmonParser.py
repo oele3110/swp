@@ -99,7 +99,7 @@ def main(update, withdrawal):
 				counter += 1
 			
 			#print j["address"] + " " + j["len"] + " " + i["origin_as"] + " update " + path
-			print "BGP4MP|01/01/01 00:00:00|A|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP"
+			print "BGP4MP|01/01/01 00:00:00|A|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP\r\n"
 			
 		# withdrawn
 		if i["count"] > 0:
@@ -112,7 +112,7 @@ def main(update, withdrawal):
 					path = " " + path
 				counter += 1
 			#print j["address"] + " " + j["len"] + " " + i["origin_as"] + " withdrawn " + path
-			print "BGP4MP|01/01/01 00:00:00|W|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP"
+			print "BGP4MP|01/01/01 00:00:00|W|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP\r\n"
 			
 	  msg += str(data)
 

@@ -26,7 +26,7 @@ def main():
 			file.close()
 			"""
 			
-			subprocess.call("/home/skims/announce.sh " + prefix, shell=True)
+			subprocess.call("/home/skims/swp/scripts/bgp-config/announce.sh " + prefix, shell=True)
 
 main()
 

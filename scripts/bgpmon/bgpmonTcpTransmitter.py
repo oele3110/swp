@@ -18,6 +18,8 @@ def main():
 	while 1:
 		conn, addr = s.accept()
 		
+		print str(addr) + " visited me"
+		
 		for line in fileinput.input():
 			#print line
 			conn.send(line)
