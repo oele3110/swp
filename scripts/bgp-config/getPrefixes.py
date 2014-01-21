@@ -6,18 +6,34 @@ import getpass
 import telnetlib
 
 HOST = "localhost"
-PORT = 2001
 
 def main():
-
+	
 	if len(sys.argv) < 2:
 		print("error, parameter missing")
 	else:
 		if sys.argv[1] == "-g":
+		
+			regexOid = "(\.1\.3\.6\.1\.4\.1\.8072\.2\.269\.)(\d{1,5})\.(\d{4})"
 			
-			tn = telnetlib.Telnet(HOST, PORT)
+			result = re.match(regexOid, sys.argv[2])
 			
-			tn.read_until("AS65001>")
+			asn = 0
+			port = 0
+			
+			if result:
+				asn = result.group(2)
+				port = result.group(3)
+			else:
+				print sys.argv[2]
+				print "string"
+				print "error"
+				return
+			
+			
+			tn = telnetlib.Telnet(HOST, port)
+			
+			tn.read_until("AS"+asn+">")
 			
 			tn.write("show ip bgp\n")
 			tn.write("exit\n")
@@ -44,7 +60,7 @@ def main():
 			print sys.argv[2]
 			print "string"
 			print resultStr
-
+			
 
 
 # start main method
