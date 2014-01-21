@@ -1,0 +1,36 @@
+######################## SNMPSET ########################
+
+
+.1.3.6.1.4.1.8072.2.264.ip i length
+set a prefix announcement
+example:
+	snmpset -v 2c -c private localhost .1.3.6.1.4.1.8072.2.264.160.45.113.0 i 26
+
+
+.1.3.6.1.4.1.8072.2.265.ip i length
+delete a prefix announcement
+example:
+	snmpset -v 2c -c private localhost .1.3.6.1.4.1.8072.2.265.160.45.113.0 i 26
+
+
+######################## SNMPGET ########################
+
+
+.1.3.6.1.4.1.8072.2.267
+get the routing table
+example:
+	snmpget -v 2c -c private localhost .1.3.6.1.4.1.8072.2.267
+
+
+.1.3.6.1.4.1.8072.2.269.asn.port
+get the announced prefixes of a specified asn (and port)
+example:
+	snmpget -v 2c -c private localhost .1.3.6.1.4.1.8072.2.269.65001.2001
+
+
+.1.3.6.1.4.1.8072.2.270.asn.port
+get the neighbors of a specified asn (and port)
+example: 
+	snmpget -v 2c -c private localhost .1.3.6.1.4.1.8072.2.270.65001.2001
+
+
