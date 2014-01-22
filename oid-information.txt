@@ -1,16 +1,16 @@
 ######################## SNMPSET ########################
 
 
-.1.3.6.1.4.1.8072.2.264.ip i length
-set a prefix announcement
+.1.3.6.1.4.1.8072.2.264.as.port.ip i length
+set a prefix announcement for a specified asn (and port)
 example:
-	snmpset -v 2c -c private localhost .1.3.6.1.4.1.8072.2.264.160.45.113.0 i 26
+	snmpset -v 2c -c private localhost .1.3.6.1.4.1.8072.2.264.65001.2001.160.45.113.0 i 26
 
 
-.1.3.6.1.4.1.8072.2.265.ip i length
-delete a prefix announcement
+.1.3.6.1.4.1.8072.2.265.as.port.ip i length
+delete a prefix announcement for a specified asn (and port)
 example:
-	snmpset -v 2c -c private localhost .1.3.6.1.4.1.8072.2.265.160.45.113.0 i 26
+	snmpset -v 2c -c private localhost .1.3.6.1.4.1.8072.2.265.65001.2001.160.45.113.0 i 26
 
 
 ######################## SNMPGET ########################
