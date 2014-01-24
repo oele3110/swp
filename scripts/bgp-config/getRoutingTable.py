@@ -40,8 +40,6 @@ def main():
 			
 			output = tn.read_all()
 			
-			#output = "K>* 0.0.0.0/0 via 160.45.111.1, eth0\nC>* 127.0.0.0/8 is directly connected, lo\nC>* 160.45.111.0/24 is directly connected, eth0\nC>* 192.168.1.2/32 is directly connected, tap1\nC>* 192.168.1.3/32 is directly connected, tap2\n"
-			
 			lines = output.split("\r\n")
 			
 			regex = "\*\>?\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})?\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+\s+\d+\s+.+"
