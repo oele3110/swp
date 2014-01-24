@@ -6,7 +6,6 @@ import getpass
 import telnetlib
 
 HOST = "localhost"
-PORT = 2000
 
 def main():
 	
@@ -14,12 +13,29 @@ def main():
 		print("error, parameter missing")
 	else:
 		if sys.argv[1] == "-g":
+
+			regexOid = "(\.1\.3\.6\.1\.4\.1\.8072\.2\.267\.)(\d{1,5})\.(\d{4})"
 			
-			tn = telnetlib.Telnet(HOST, PORT)
+			result = re.match(regexOid, sys.argv[2])
 			
-			tn.read_until("Zebra>")
+			asn = 0
+			port = 0
 			
-			tn.write("show ip route\n")
+			if result:
+				asn = result.group(2)
+				port = result.group(3)
+			else:
+				print sys.argv[2]
+				print "string"
+				print "error"
+				return
+			
+
+			tn = telnetlib.Telnet(HOST, port)
+			
+			tn.read_until("AS"+asn+">")
+			
+			tn.write("show ip bgp\n")
 			tn.write("exit\n")
 			
 			output = tn.read_all()
@@ -28,24 +44,19 @@ def main():
 			
 			lines = output.split("\r\n")
 			
-			regex = "(K|C|S|R|O|I|B|A)\>\*\s(.*)"
+			regex = "\*\>?\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})?\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+\s+\d+\s+.+"
+			regexHead = "\s*Network\s*Next\sHop\s*Metric\s*LocPrf\s*Weight\s*Path\s*"
 			
 			resultStr = ""
 			
 			for line in lines:
 					result = re.match(regex, line)
+					resultHead = re.match(regexHead, line)
 					if result:
 							resultStr += line + "\\n"
-					
-					if "Codes: K - kernel route, C - connected, S - static, R - RIP," in line:
-							#print line
+					if resultHead:
 							resultStr += line + "\\n"
-					if "O - OSPF, I - IS-IS, B - BGP, A - Babel," in line:
-							#print line
-							resultStr += line + "\\n"
-					if "> - selected route, * - FIB route" in line:
-							#print line + "\n"
-							resultStr += line + "\\n\\n"
+
 					
 			
 			print sys.argv[2]
