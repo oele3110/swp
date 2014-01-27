@@ -61,13 +61,13 @@ def parse(xml, update, withdrawal):
 	return l
 
 
-def main(update, withdrawal):
+def main(update, withdrawal, dataFormat):
 	cli = socket( AF_INET,SOCK_STREAM)
 	cli.connect(("livebgp.netsec.colostate.edu", 50001))
 	data =""
 	msg = ""
-	signal.signal(signal.SIGPIPE, signal.SIG_DFL)
-	signal.signal(signal.SIGINT, signal.SIG_IGN)
+	#signal.signal(signal.SIGPIPE, signal.SIG_DFL)
+	#signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 	while True:
 		data = cli.recv(1024) #14= </BGP_MESSAGE>
@@ -98,8 +98,22 @@ def main(update, withdrawal):
 								path = " " + path
 							counter += 1
 						
-						#print j["address"] + " " + j["len"] + " " + i["origin_as"] + " update " + path
-						print "BGP4MP|01/01/01 00:00:00|A|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP\r"
+						if dataFormat == "json":
+							pathParts = path.split(" ")
+							jsonPath = ""
+							counter = 0
+							for part in pathParts:
+								jsonPath += "\""+part+"\""
+								if counter != (len(pathParts)-1):
+									jsonPath += ", "
+								counter += 1
+							#{ "nodes": [ { "asn": "12345", "prefix": ["2.92.134.0/24"], "type": "withdraw", "path": ["1", "2", "3"] } ] }
+							#{ "nodes": [ { "asn": "srcAsn", "prefix": [ "prefix" ], "type": "update/withdraw", "path": [ "asn1", "asn2", "asn3", ... ] } ] }
+							print "{ \"nodes\": [ { \"asn\": \""+i["origin_as"]+"\", \"prefix\": [\""+j["address"] + "/" + j["len"]+"\"], \"type\": \"announcement\", \"path\": [ "+jsonPath+" ] } ] }"
+						elif dataFormat == "mrt":
+							print "BGP4MP|01/01/01 00:00:00|A|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP\r"
+						else:
+							print j["address"] + " " + j["len"] + " " + i["origin_as"] + " update " + path
 						
 					# withdrawn
 					if i["count"] > 0:
@@ -111,8 +125,24 @@ def main(update, withdrawal):
 							if counter != (len(i["as_path"])-1):
 								path = " " + path
 							counter += 1
-						#print j["address"] + " " + j["len"] + " " + i["origin_as"] + " withdrawn " + path
-						print "BGP4MP|01/01/01 00:00:00|W|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP\r"
+						
+						if dataFormat == "json":
+							pathParts = path.split(" ")
+							jsonPath = ""
+							counter = 0
+							for part in pathParts:
+								jsonPath += "\""+part+"\""
+								if counter != (len(pathParts)-1):
+									jsonPath += ", "
+								counter += 1
+							#{ "nodes": [ { "asn": "12345", "prefix": ["2.92.134.0/24"], "type": "withdraw", "path": ["1", "2", "3"] } ] }
+							#{ "nodes": [ { "asn": "srcAsn", "prefix": [ "prefix" ], "type": "update/withdraw", "path": [ "asn1", "asn2", "asn3", ... ] } ] }
+							print "{ \"nodes\": [ { \"asn\": \""+i["origin_as"]+"\", \"prefix\": [\""+j["address"] + "/" + j["len"]+"\"], \"type\": \"withdraw\", \"path\": [ "+jsonPath+" ] } ] }"
+						elif dataFormat == "mrt":
+							print "BGP4MP|01/01/01 00:00:00|W|0.0.0.0|" + i["origin_as"] + "|" + j["address"] + "/" + j["len"] + "|" + path + "|IGP\r"
+						else:
+							print j["address"] + " " + j["len"] + " " + i["origin_as"] + " withdrawn " + path
+
 				
 		msg += str(data)
 
@@ -120,16 +150,16 @@ def main(update, withdrawal):
 if len(sys.argv) < 2:
 	print "wrong selection, choose -u for updates and/or -w for withdrawals"
 else:
-	if len(sys.argv) == 2:
-		if sys.argv[1] == "-u":
-			main(True, False)
-			#print "true false"
-		elif sys.argv[1] == "-w":
-			main(False, True)
-			#print "false true"
-	elif len(sys.argv) == 3:
-		if (sys.argv[1] == "-u" and sys.argv[2] == "-w") or (sys.argv[1] == "-w" and sys.argv[2] == "-u"):
-			main(True, True)
-			#print "true true"
-	else:
-		print "wrong selection, choose -u for updates and/or -w for withdrawals"
+	update = False
+	withdrawal = False
+	dataFormat = ""
+
+	for i in range(1, len(sys.argv)):
+		if sys.argv[i] == "-u":
+			update = True
+		if sys.argv[i] == "-w":
+			withdrawal = True
+		if sys.argv[i] == "-f":
+			dataFormat = sys.argv[i+1]
+	
+	main(update, withdrawal, dataFormat)
