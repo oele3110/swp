@@ -1,0 +1,12 @@
+
+run like this
+
+python bgpmonParser.py -u -w -f json | python threadedWebsocketServer.py
+
+parameter:
+	-u 		announcements
+	-w 		withdrawals
+	-f 		dataOutputFormat
+		possibilities:
+			-f json
+			-f mrt
