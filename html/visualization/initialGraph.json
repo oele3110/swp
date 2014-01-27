@@ -1,0 +1,57 @@
+{
+    "nodes": [
+        {
+            "asn": "A"
+        },
+        {
+            "asn": "B"
+        },
+        {
+            "asn": "C"
+        },
+        {
+            "asn": "D",
+            "prefix": ["2.92.134.0/24"]
+        },
+        {
+            "asn": "E",
+            "prefix": ["204.234.0.0/17"]
+        },
+        {
+            "asn": "F"
+        },
+        {
+            "asn": "G"
+        }
+    ],
+    "links": [
+        {
+            "source": 0,
+            "target": 1
+        },
+        {
+            "source": 1,
+            "target": 2
+        },
+        {
+            "source": 2,
+            "target": 3
+        },
+        {
+            "source": 3,
+            "target": 5
+        },
+        {
+            "source": 5,
+            "target": 6
+        },
+        {
+            "source": 1,
+            "target": 4
+        },
+        {
+            "source": 4,
+            "target": 5
+        }
+    ]
+}

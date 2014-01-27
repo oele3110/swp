@@ -1,0 +1,14 @@
+{
+	"nodes": [
+        {
+            "asn": "E",
+            "prefix": ["2.92.134.0/24"],
+            "type": "Announcement"
+        },
+        {
+            "asn": "D",
+            "prefix": ["2.92.134.0/24"],
+            "type": "Withdraw"
+        }
+    ]
+}
