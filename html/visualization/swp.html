@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Force Plus Append</title>
+        <script type="text/javascript" src="http://d3js.org/d3.v2.min.js"></script>
+    </head>
+    <style>
+    .link {
+        fill: none;
+        stroke: #666;
+        stroke-width: 1.5px;
+    }
+    
+    circle {
+        fill: #6495ED; /* CornflowerBlue */
+        stroke: #fff;
+        stroke-width: 1.5px;
+    }
+    
+    div.tooltip
+    {
+        position: absolute;
+        text-align: center;
+        width: 170px;
+        height: 12px;
+        padding: 8px;
+        font: 12px sans-serif;
+        background: lightsteelblue; /* vorher: #ddd */
+        border: solid 1px #aaa;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+    </style>
+    <body>
+    <!-- load and update button -->
+    <div id="update">
+        <input name="updateButton" type="button" value="Prefix hijack" onclick="newData()"/>
+    </div>
+    <script>
+    // websockets -------------------------------------
+//    var connection = new WebSocket('ws://localhost:5001');
+//    
+//    // When the connection is open, send some data to the server
+//    connection.onopen = function ()
+//    {
+//        connection.send('Ping'); // Send the message 'Ping' to the server
+//        console.log('OPEN');
+//    };
+//    
+//    // Log errors
+//    connection.onerror = function (error)
+//    {
+//        console.log('WebSocket Error ' + error);
+//    };
+//    
+//    // Log messages from the server
+//    connection.onmessage = function (e)
+//    {
+//        console.log('Fertig!');
+//    };
+    //-------------------------------------------------
+    
+    width = 960;
+    height = 600;
+    
+    var force = d3.layout.force()
+        .charge(-300)
+        .linkDistance(100)
+        .size([width, height])
+        .on("tick", tick);
+    
+    var nodes = force.nodes(),
+        links = force.links();
+    
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("border", "1px solid black");
+    
+    var tooltipDiv = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 1e-6);
+    
+    var path = svg.append("g").selectAll("path"),
+        node = svg.append("g").selectAll("circle");
+    
+    d3.json("initialGraph.json", function(json) {
+        // add nodes
+        json.nodes.forEach(function (d) {
+            nodes.push(d);
+        });
+        
+        // add links
+        json.links.forEach(function (d) {
+            links.push({source: d.source, target: d.target});
+        });
+            
+        // add prefixes as nodes and add links to corresponding 'asn'
+        json.nodes.forEach(function (nodeWithPrefix) {
+            if (nodeWithPrefix.prefix != null) {
+                newNode = nodes.push({prefix: nodeWithPrefix.prefix});
+                links.push({source: nodeWithPrefix, target: nodes[newNode-1]});
+            }
+        });
+            
+        update();
+    });
+    
+    function update() {
+        path = path.data(links);
+    
+        path.enter().insert("line", "node")
+            .attr("class", "link");
+        
+        path.exit().remove();
+        
+        node = node.data(nodes);
+        
+        nodeEnter = node.enter().append("g")
+            .attr("class", "node")
+            .attr("r", 8)
+            .call(force.drag)
+            .on("mouseover", function (d) {
+                tooltipDiv.transition()
+                .duration(200)
+                .style("opacity", function (t) {
+                       return 0.9;
+                       })
+                })
+            .on("mouseout", function (d) {
+                tooltipDiv.transition()
+                .duration(200)
+                .style("opacity", function (t) {
+                       return 0;
+                })
+            })
+            .on("mousemove", function (d) {
+                tooltipDiv
+                .text(function (o) {
+                    if (d.asn)
+                        return "AS Number: " + d.asn;
+                    else if (d.prefix)
+                        return "Prefix: " + d.prefix;
+                })
+                .style("left", (d3.event.pageX - 93) + "px")
+                .style("top", (d3.event.pageY - 45) + "px");
+            });
+        
+        node.append("circle")
+            .attr("class", "circle")
+            .attr("r", 8)
+            .style("fill", function (d) {
+                if (d.asn == null)  // node is a prefix
+                    return "red";
+            });
+        
+        nodeEnter.append("text")
+            .attr("class", "nodetext")
+            .attr("dx", 12)
+            .attr("dy", ".35em")
+            .text(function(d) { return d.asn || d.prefix});
+        
+        node.exit().remove();
+        
+        force.start();
+	}
+    
+    function newData() {
+        d3.json("updateAnnounce.json", function(json) {
+            json.nodes.forEach(function (nodeToAdd) {
+                nodeToUpdate = nodes.filter(function (d) {
+                    return (d.asn === nodeToAdd.asn);
+                });
+                
+                // add new prefix to already existing AS's
+                nodeToUpdate.forEach(function (aNode) {
+                    if ((aNode.prefix == null) ||       // existing node without 'prefix' gets a new prefix
+                        ((nodeToAdd.prefix != null) &&  // add prefixes as nodes and add links to 'asn'
+                        (aNode.prefix.indexOf(nodeToAdd.prefix) == -1))) {
+                        newNode = nodes.push({prefix: nodeToAdd.prefix});
+                        links.push({source: aNode, target: nodes[newNode-1]});
+                    }
+                    
+                    console.log("AS: '" + nodeToUpdate[0].asn + "' gets new Prefix '" + nodeToAdd.prefix[0] + "'");
+                })
+            });
+                
+            update();
+        });
+    }
+    
+    function tick() {
+        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+             
+        path.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+    }
+
+        
+    </script>
+    </body>
+</html>
