@@ -2,7 +2,7 @@
 	"nodes": [
         {
             "asn": "E",
-            "prefix": ["10.20.30.40/20"],
+            "prefix": ["2.92.134.0/24"],
             "type": "Announcement"
         },
         {

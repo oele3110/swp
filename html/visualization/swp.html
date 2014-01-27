@@ -100,7 +100,7 @@
         // add prefixes as nodes and add links to corresponding 'asn'
         json.nodes.forEach(function (nodeWithPrefix) {
             if (nodeWithPrefix.prefix != null) {
-                newNode = nodes.push({prefix: nodeWithPrefix.prefix});
+                newNode = nodes.push({prefix: nodeWithPrefix.prefix, parent: nodeWithPrefix.asn});
                 links.push({source: nodeWithPrefix, target: nodes[newNode-1]});
             }
         });
@@ -204,13 +204,21 @@
                             allNewNodes = nodes.filter(function (o) {
                                 // 'o' is a node
                                 if (o.asn != null) {
-                                    return o.asn;
+                                    return o;
                                 }
                                 // 'o' is a prefix
                                 else if (o.prefix != null) {
                                     // the prefix will be remained
-                                    if (o.prefix[0] != nodeToAdd.prefix[0]) {
-                                        return o.prefix;
+                                    // if (o.prefix[0] != nodeToAdd.prefix[0]) {
+                                    //     return o.prefix;
+                                    // }
+
+                                    // remove 'prefix' from the specific node
+                                    if (o.parent != nodeToAdd.asn) {
+                                        return o;
+                                    }
+                                    else if (o.prefix[0] != nodeToAdd.prefix[0]) {
+                                        return o;
                                     }
                                 }
                             });
@@ -220,21 +228,27 @@
                                 if (l.target.asn != null) {
                                     return l;
                                 }
+                                // 'target' is a prefix
                                 else {
-                                    if (l.target.prefix[0] != nodeToAdd.prefix[0]) {
+                                    // if (l.target.prefix[0] != nodeToAdd.prefix[0]) {
+                                    //     return l;
+                                    // }
+
+                                    // remove link from the specific 'prefix'
+                                    if (l.target.parent != nodeToAdd.asn) {
+                                        return l;
+                                    }
+                                    else if (l.target.prefix[0] != nodeToAdd.prefix[0]) {
                                         return l;
                                     }
                                 }
-
-                                // return ((l.source.asn != nodeToAdd.asn) &&
-                                //         (l.target.prefix != nodeToAdd.prefix));
                             });
 
                             nodes = allNewNodes;
                             links = allNewLinks;
                         }
                         else if (nodeToAdd.type == "Announcement") {
-                            newNode = nodes.push({prefix: nodeToAdd.prefix});
+                            newNode = nodes.push({prefix: nodeToAdd.prefix, parent: nodeToAdd.asn});
                             links.push({source: aNode, target: nodes[newNode-1]});
                         }
                     }
@@ -242,14 +256,6 @@
 //                    console.log("AS: '" + nodeToUpdate[0].asn + "' gets new Prefix '" + nodeToAdd.prefix[0] + "'");
                 })
             });
-
-            // remove element '5' from array
-            // var array = [2, 5, 9];
-            // var index = array.indexOf(5);
-            // if (index > -1) {
-            //     array.splice(index, 1);
-            // }
-            // console.log(array);
             
             update();
         });
