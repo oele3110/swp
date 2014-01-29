@@ -5,20 +5,31 @@
         <title>Force Layout</title>
     </head>
 	<style>
-	
 		circle {
 			stroke: #fff;
-			stroke-width: 2px;
+			stroke-width: 3px;
 		}
-		
+		text {
+			font-size: 20px;
+			font-family: Courier New;
+			font-weight: normal;
+			pointer-events: none;
+			text-shadow: 0 1px 3px #000, 1px 0 3px #000, 0 -1px 3px #000, -1px 0 3px #000;
+			color:#ffffff;
+		}
 		path.link {
 			fill: none;
 			stroke: #fff;
-			stroke-width: 4px;
+			stroke-width: 3px;
 			cursor: default;
 		}
-		
-		div.tooltip {   
+		path.hijack {
+			fill: none;
+			stroke: #d62728;
+			stroke-width: 3px;
+			cursor: default;
+		}
+		div.tooltip {
 			position: absolute;
 			text-align: center;
 			vertical-align: middle;
@@ -29,115 +40,260 @@
 			border-radius: 4px;
 			pointer-events: none;
 		}
-		
+		.field {
+			font-size:20px;
+			font-family:Courier New;
+			font-weight:normal;
+			-moz-border-radius:4px;
+			-webkit-border-radius:4px;
+			border-radius:4px;
+			border:1px solid #ffffff;
+			padding:0px 5px;
+			text-decoration:none;
+			background:-webkit-gradient( linear, left top, left bottom, color-stop(20%, #333333), color-stop(85%, #000000) );
+			background:-moz-linear-gradient( center top, #333333 20%, #000000 85% );
+			background:-ms-linear-gradient( top, #333333 20%, #000000 85% );
+			background-color:#333333;
+			color:#ffffff;
+			display:inline-block;
+			width: 150px; 
+			text-align: center;
+		}
+		.field:hover {
+			background:-webkit-gradient( linear, left top, left bottom, color-stop(20%, #000000), color-stop(85%, #333333) );
+			background:-moz-linear-gradient( center top, #000000 20%, #333333 85% );
+			background:-ms-linear-gradient( top, #000000 20%, #333333 85% );
+			background-color:#000000;
+		}
+		.field:active {
+			position:relative;
+			top:1px;
+		}
 	</style>
     <body>
-    	<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
-    	<script type="text/javascript">
+    <div align="center">
+    	<form name="choose" action="">
+    		<input type="text" name="asn" class="field" placeholder="ASN" onkeydown="return event.keyCode != 13;"/>
+    		<input type="button" value="click" class="field" onclick="button_click(document.choose.asn.value)" />
+    	</form>
+    </div>
+	<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+	<script type="text/javascript">
+		// set background color
 		document.body.style.backgroundColor = '#000';
 	</script>
 	<script type="text/javascript">
-		
+
 		var width  = window.innerWidth-15,
 			height = window.innerHeight-15,
 		    padding = 100, // separation between nodes
-		    maxRadius = 50; 
+		    maxRadius = 50;
 
 		var n = 10, // total number of nodes
 		    m = 2; // number of distinct clusters
 
-		var color = d3.scale.category10()
-		    .domain(d3.range(10));
-
+		// define attacker and target field
 		var x = d3.scale.ordinal()
 		    .domain(d3.range(m))
 		    .rangePoints([0, width], 1);
 
 		var newSource = null,
 			newTarget = null;
-				
-		// create random nodes
-		var nodes = d3.range(n).map(function() {
-		  var i = Math.floor(Math.random() * m),
-		      v = (i + 1) / m * -Math.log(Math.random());
-			  
-		  return {
-			  type: ((x(i) < width/2) ? "attacker" : "target"), 
-			  radius: maxRadius,
-			  color: ((x(i) < width/2) ? color(3) : color(9)),
-			  cx: x(i),
-			  cy: height / 2
-		  };
-		});
-		
+
 		// start without links
-		var links = [];
+		var nodes = [],
+			links = [];
 
 		// init force layout
 		var force = d3.layout.force()
-		    .nodes(nodes)
-			.links(links)
-			.linkDistance(x(1)-x(0)-maxRadius)
+			.linkDistance(function (d) { return d.source.attacker ? x(1)-x(0)-125 : 125  } )
 		    .size([width, height])
 		    .gravity(0)
-		    .charge(-2000)
+		    .charge(function (d) { return node_charge(d)} )
 		    .on("tick", tick);
 
 		// add svg
 		var svg = d3.select("body")
 			.append("svg")
 		    .attr("width", width)
-		    .attr("height", height);
-			
-		// add background color
-		//svg.append("rect")
-		//    .attr("width", width)
-		//    .attr("height", height)
-		//    .attr("fill", "black");
-	
+
 		// build arrow header of links
 		svg.append('svg:defs').append('svg:marker')
 			.attr('id', 'end-arrow')
 			.attr('viewBox', '0 -5 10 10')
-			.attr('refX', 50)
-			.attr('markerWidth', 3)
-			.attr('markerHeight', 3)
+			.attr('refX', 18)
+			.attr('markerWidth', 5)
+			.attr('markerHeight', 5)
 			.attr('orient', 'auto')
 			.append('svg:path')
 				.attr('d', 'M0,-5L10,0L0,5')
 				.attr('fill', '#fff');
 
+		svg.append('svg:defs').append('svg:marker')
+			.attr('id', 'end-arrow-red')
+			.attr('viewBox', '0 -5 10 10')
+			.attr('refX', 18)
+			.attr('markerWidth', 5)
+			.attr('markerHeight', 5)
+			.attr('orient', 'auto')
+			.append('svg:path')
+				.attr('d', 'M0,-5L10,0L0,5')
+				.attr('fill', '#d62728');
+
 		// define tooltip
 		var div = d3.select("body")
-			.append("div")   
-		    .attr("class", "tooltip")             
+			.append("div")
+		    .attr("class", "tooltip")
 			.style("opacity", 0);
 
 		// selection of links
-		var path = svg.append('svg:g').selectAll('path');
-		
+		var path = svg.selectAll('path')
+			.data(links);
+
 		// selection of nodes
 		var circle = svg.selectAll("circle")
-		    .data(nodes)
-		  .enter().append("circle")
-		    .attr("r", function(d) { return d.radius; })
-		    .style("fill", function(d) { return d.color; })
-		    .on("click", click)
-			.on("mouseover", function(d) {      
-				div.transition()        
-					.duration(200)      
-					.style("opacity", .75);      
-				div.html(d.type)  
-					.style("color", "white")
-					.style("left", (d3.event.pageX) + "px")     
-					.style("top", (d3.event.pageY - 28) + "px");    
-			})                  
-			.on("mouseout", function(d) {       
-				div.transition()        
-					.duration(500)      
-					.style("opacity", 0);   
-			})
-			.call(force.drag);
+		    .data(nodes);
+
+		// selection of labels
+		var text = svg.selectAll("text")
+		    .data(nodes);
+
+		// get nodes from json
+		d3.json("graph.json", function(error, graph) {
+			graph.nodes.forEach(function(item) {
+				if(item.prefix) {
+                    nodes.push({
+                        asn: item.asn,
+                        port: item.port,
+                        attacker: item.attacker ? true : false,
+                        prefix: item.prefix,
+                        cx: item.attacker ? x(0) : x(1),
+                        cy: height / 2
+                    });
+                } else {
+                    nodes.push({
+                        asn: item.asn,
+                        port: item.port,
+                        attacker: item.attacker ? true : false,
+                        cx: item.attacker ? x(0) : x(1),
+                        cy: height / 2
+                    });
+                }
+				circle = svg.selectAll("circle")
+					.data(nodes);
+				text = svg.selectAll("text")
+		    		.data(nodes);
+				update();
+			});
+		});
+
+		function update() {
+			// add new data to force
+			circle = circle.data(nodes);
+			text = text.data(nodes);
+			path = path.data(links);
+			// restart force
+			force
+				.nodes(nodes)
+				.links(links)
+				.start();
+			// enter nodes
+			circle.enter().append("circle")
+				.style("fill", function (d) { return d.attacker ? "#d62728" : "#17becf" } )
+				.on("click", node_click)
+				.on("mouseover", function (d) {
+						if(d.attacker) {
+							div.transition()
+								.duration(200)
+								.style("opacity", .75);
+							div.html(tip_text(d))
+								.style("color", "white")
+								.style("left", d.x + "px")
+								.style("top", d.y + "px");
+						}
+					})
+				.on("mouseout", function(d) {
+					div.transition()
+						.duration(500)
+						.style("opacity", 0);
+				})
+				.call(force.drag);
+			text.enter().append("text")
+				.attr("x", 15)
+				.attr("y", -15)
+				.text(function(d) { return d.asn ? d.asn : d.prefix; })
+				.style("fill","white");
+			// enter links
+			path.enter().insert("path", "circle")
+				.attr("class", function (d) { return d.hijack ? "hijack" : "link" } )
+				.attr("marker-end", arrow)
+				.on("click", link_click);
+			// update nodes
+			circle.transition()
+				.attr("r", function (d) { return node_size(d)});
+			// update links
+			path.attr("class", function (d) { return d.hijack ? "hijack" : "link" } )
+				.attr("marker-end", arrow);
+			// remove nodes
+			circle.exit().remove();
+			text.exit().remove();
+			// remove links
+			path.exit().remove();
+		}
+
+		function tip_text(d) {
+			if(d.attacker) {
+				// get announced prefixes
+				var request = new XMLHttpRequest();
+				request.open("POST", "/demo/get", false);
+				request.send("oid=1.3.6.1.4.1.8072.2.269."+d.asn+"."+d.port);
+				if(request.readyState == 4) {
+					return request.responseText.split("\\n").join("<br/>");
+				} 
+			} else {
+				if(d.asn) {
+					return 'AS'+d.asn;
+				} else {
+					return d.prefix;
+				}
+			}
+		}
+
+		// set arrow and its color
+		function arrow(d) {
+			if (d.source.attacker) {
+				if (d.hijack) {
+					return "url(#end-arrow-red)"
+				} else {
+					return "url(#end-arrow)"
+				}
+			} else {
+				return null;
+			}
+		}
+
+		// set size of node according to properties
+		function node_size(d) {
+			// node of attacker
+			if (d.attacker) return 50;
+			// node of single prefix
+			if (d.parent) return 15;
+			// node of target showing prefixes or not
+			return d.displays ? 75 : 15;
+		}
+
+		// set charge according to node
+		function node_charge(d) {
+			if (d.attacker) return -2000;
+			if (d.parent) return -350;
+			return d.displays ? -4000 : -350;
+		}
+
+		// set label of node
+		function node_label(d) {
+			if (d.parent) return d.prefix;
+			return d.asn;
+		}
 
 		// iteration of force layout
 		function tick(e) {
@@ -152,12 +308,10 @@
                     d.target.x + "," +
                     d.target.y;
             });
-			
-			circle
-				.each(gravity(.2 * e.alpha))
+			circle.each(gravity(.2 * e.alpha))
 				.each(collide(.5))
-				.attr("cx", function(d) { return d.x; })
-				.attr("cy", function(d) { return d.y; });
+				.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+			text.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 		}
 
 		// move nodes toward cluster focus
@@ -195,51 +349,92 @@
 		    });
 		  };
 		}
-		
+
 		// handle click on node
-		function click (d) {
-			if (d.type === 'attacker') {
+		function node_click(d) {
+			// target nodes
+			if ((d.asn !== undefined) && (d.prefix !== undefined) && !d.attacker) {
+				if (!d.displays) {
+                    // add prefix nodes
+                    d.prefix.forEach(function(item) {
+                        new_node_index = nodes.push({parent: d.asn, prefix: item, cx: d.cx, cy: d.cy});
+                        links.push({source: d, target: nodes[new_node_index-1]});
+                    });
+                    d.displays = true;
+                } else {
+                    // remove prefix nodes and its links
+                    delete_nodes = nodes.filter(function (item) {
+                        return (item.parent === d.asn);
+                    });
+                    nodes = nodes.filter(function (item) {
+                        return (item.parent !== d.asn);
+                    });
+                    links = links.filter(function (item) {
+                        return (delete_nodes.indexOf(item.target) == -1)
+                    });
+                    d.displays = false;
+                }
+			} 
+			// attacker nodes
+			if (d.attacker) {
 				newSource = d;
-			} else {
-				newTarget = d;
+            }
+			// prefix nodes
+			if (d.parent) {
+			    newTarget = d;
+            }
+            // add hijack links
+            if (newSource && newTarget) {
+            	 links.push({source: newSource, target: newTarget});
+            	 newSource = null;
+            	 newTarget = null;
+            }
+			update();
+		}
+
+		// handle click on link
+		function link_click(d) {
+			// handle links from attacker to prefix node
+			if(d.source.attacker) {
+				if(!d.hijack) {
+					// start prefix announcement
+					parameter = "op=add"+
+								"&asn="+d.source.asn+
+								"&port="+d.source.port+
+								"&ip="+d.target.prefix.slice(0,-3)+
+								"&val="+d.target.prefix.slice(d.target.prefix.length-2);
+					d.hijack = true;
+				} else {
+					// stop prefix announcement
+					parameter = "op=del"+
+								"&asn="+d.source.asn+
+								"&port="+d.source.port+
+								"&ip="+d.target.prefix.slice(0,-3)+
+								"&val="+d.target.prefix.slice(d.target.prefix.length-2);
+					d.hijack = false;
+				}
+				// http request to server to start snmpset
+				var request = new XMLHttpRequest();
+				request.open("POST", "/demo/set", false);
+				request.send(parameter);
 			}
-			
-			if (!(newSource === null) && !(newTarget === null)) {
+			update();
+		}
 
-                var newLink = {source: newSource, target: newTarget};
-		        links.push(newLink);
-
-                updateLinks();
+		// handle hit on button like click on node
+		function button_click(asn) {
+			if (!isNaN(asn)) {
+				// select node according to asn
+				selected_node = nodes.filter(function (item) {
+	            	return (item.asn === asn.toString());
+	            });
+	            // "click" on
+	            selected_node[0] && node_click(nodes[nodes.indexOf(selected_node[0])]);
 			}
 		}
-		
-		// add new links
-		function updateLinks() {
-			path = path.data(force.links());
 
-			// update link
-			path.attr("class", "link")
-            	.attr("marker-end", "url(#end-arrow)");
-
-			// enter link
-          	path.enter().append("svg:path")
-            	.attr("class", "link")
-            	.attr("marker-end", "url(#end-arrow)")
-				.on("click", function(d) {console.log(d)} );
-
-			// exit link
-			path.exit().remove();
-			
-			// reset temp vars
-			newSource = null;
-			newTarget = null;
-			
-			// restart force layout
-			force.start();
-		}
-		
 		// start force layout
 		force.start();
-    	</script>
+    </script>
 	</body>
 </html>
