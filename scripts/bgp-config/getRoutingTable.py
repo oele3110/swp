@@ -42,8 +42,8 @@ def main():
 			
 			lines = output.split("\r\n")
 			
-			regex = "\*\>?\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})\s*\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+\s+\d+\s+.+"
-			regex2 = "(\*\>?)\s+(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\s+\d+\s+\d+\s+.+)"
+			regex = "(\*\>?)\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})?\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*0?\s*(0|32768)\s*((\d{1,5}\s?)*)\s+i"
+			#regex2 = "(\*\>?)\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/\d{1,2})?\s*(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s*0?\s*(0|32768)\s*((\d{1,5}\s?)*)\s+i"
 			
 			regexHead = "\s*Network\s*Next\sHop\s*Metric\s*LocPrf\s*Weight\s*Path\s*"
 			
@@ -53,16 +53,20 @@ def main():
 
 			for line in lines:
 					result = re.match(regex, line)
-					result2 = re.match(regex2, line)
+					#result2 = re.match(regex2, line)
 					
 					resultHead = re.match(regexHead, line)
 					if result:
-							previousAsn = result.group(1)
-							resultStr += line + "\\n"
-					if result2:
-							resultStr += result2.group(1) + " " + previousAsn + "  " + result2.group(2) + "\\n"
-					if resultHead:
-							resultStr += line + "\\n"
+							if result.group(2):
+								previousAsn = result.group(2)
+								resultStr += result.group(1) + "\\t" + result.group(2) + "\\t" + result.group(3) + "\\t" + result.group(5) + "\\n"
+							else:
+								resultStr += result.group(1) + "\\t" + previousAsn + "\\t" + result.group(3) + "\\t" + result.group(5) + "\\n"
+							#resultStr += line + "\\n"
+					#if result2:
+							#resultStr += result2.group(1) + " " + previousAsn + "  " + result2.group(2) + "\\n"
+					#if resultHead:
+					#		resultStr += line + "\\n"
 
 					
 			
