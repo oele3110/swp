@@ -1,7 +1,7 @@
 
 run like this
 
-python bgpmonParser.py -u -w -f json | python threadedWebsocketServer.py
+python bgpmonParser.py -u -w -f json | python threadedBroadcast.py
 
 parameter:
 	-u 		announcements
