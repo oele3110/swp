@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>SWP Mobilkommunikation: Prefix Hijack</title>
+        <script type="text/javascript" src="http://d3js.org/d3.v2.min.js"></script>
+    </head>
+    <style>
+    .link {
+        fill: none;
+        stroke: #666;
+        stroke-width: 1.5px;
+    }
+    
+    circle {
+        fill: #6495ED; /* CornflowerBlue */
+        stroke: #fff;
+        stroke-width: 1.5px;
+    }
+    
+    div.tooltip
+    {
+        position: absolute;
+        text-align: center;
+        width: 170px;
+        height: 12px;
+        padding: 8px;
+        font: 12px sans-serif;
+        background: lightsteelblue; /* vorher: #ddd */
+        border: solid 1px #aaa;
+        border-radius: 8px;
+        pointer-events: none;
+    }
+    </style>
+    <body>
+    <!-- load complete graph -->
+    <div id="complete">
+        <input name="complete_graph" type="button" value="Complete graph" onclick="displayCompleteGraph()"/>
+    </div>
+    <!-- load and update button -->
+    <div id="update">
+        <input name="updateButton" type="button" value="Prefix hijack" onclick="updateFromJSONFile()"/>
+    </div>
+    <!-- text fields -->
+    <input type="text" id="txtField_asn" placeholder="Enter an AS number" value="65001"/>
+    <input type="text" id="txtField_prefix" placeholder="Enter a prefix" value="160.45.144.0/26"/>
+    <!-- filter button -->
+    <input type="button" id="btnFilter" value="Filter" onclick="filterByInput()" />
+    </br>   <!-- make a line break -->
+    
+    <script>
+
+    var width = 960,
+        height = 450;
+    
+    var force = d3.layout.force()
+        .charge(-500)
+        .linkDistance(80)
+        .size([width, height])
+        .on("tick", tick);
+    
+    var nodes = [],
+        links = [],
+        totalNodes = [],
+        totalLinks = [];
+    
+    var svg = d3.select("body").append("svg")
+        .attr("width", width)
+        .attr("height", height)
+        .style("border", "1px solid black");
+    
+    var tooltipDiv = d3.select("body").append("div")
+        .attr("class", "tooltip")
+        .style("opacity", 1e-6);
+    
+    var path = svg.append("g").selectAll("path"),
+        node = svg.append("g").selectAll("circle"),
+        text = svg.append("g").selectAll("text");
+
+    d3.json("initialGraph.json", function(json) {
+        // add nodes
+        json.nodes.forEach(function (d) {
+            nodes.push(d);
+            totalNodes.push(d);
+        });
+        
+        // add links
+        json.links.forEach(function (d) {
+            links.push({source: d.source, target: d.target});
+            totalLinks.push({source: d.source, target: d.target});
+        });
+            
+        // add prefixes as nodes and add links to corresponding 'asn'
+        json.nodes.forEach(function (nodeWithPrefix) {
+            if (nodeWithPrefix.prefix != null) {
+                var newNode = nodes.push({prefix: nodeWithPrefix.prefix, parent: nodeWithPrefix.asn});
+                links.push({source: nodeWithPrefix, target: nodes[newNode-1]});
+                
+                var newNode2 = totalNodes.push({prefix: nodeWithPrefix.prefix, parent: nodeWithPrefix.asn});
+                totalLinks.push({source: nodeWithPrefix, target: totalNodes[newNode2-1]});
+            }
+        });
+        
+        update();
+    });
+    
+    function update() {
+        force
+            .nodes(nodes)
+            .links(links)
+            .start();
+
+        path = path.data(links);
+        path.exit().remove();
+        path.enter().insert("line", "node")
+            .attr("class", "link")
+            .style("opacity", 0)
+            .transition().duration(3000)
+            .style("opacity", 1);
+
+        node = node.data(nodes);
+        node.enter().append("circle")
+        node.exit().remove();
+        node
+            .attr("class", "node")
+            .on("mouseover", function (d) {
+                tooltipDiv.transition()
+                .duration(200)
+                .style("opacity", function (t) {
+                    return 0.9;
+                })
+            })
+            .on("mouseout", function (d) {
+                tooltipDiv.transition()
+                .duration(200)
+                .style("opacity", function (t) {
+                    return 0;
+                })
+            })
+            .on("mousemove", function (d) {
+                tooltipDiv
+                .text(function (o) {
+                    if (d.asn)
+                        return "AS Number: " + d.asn;
+                    else if (d.prefix)
+                        return "Prefix: " + d.prefix;
+                })
+                .style("left", (d3.event.pageX - 93) + "px")
+                .style("top", (d3.event.pageY - 45) + "px");
+            })
+            .call(force.drag)
+            .transition().duration(1000)
+            // .attr("r", 8)
+            .attr("r", function (d) {
+                if (d.weight > 10)
+                    return 20;
+                else
+                    return d.weight + 7;
+            })
+            .style("fill", function (d) {
+                if (d.asn == null)  // node is a prefix
+                    return "red";
+            });
+
+        text = text.data(nodes);
+        text.enter().append("text")
+            .attr("class", "label")
+            .attr("x", function (d) {
+                if (d.weight > 10)
+                    return 25;
+                else
+                    return d.weight + 12;
+            })
+            .attr("y", ".31em")
+            .style("opacity", 0)
+            .transition().duration(3000)
+            .style("opacity", 1);
+        text.exit().remove();
+        text
+            .text(function(d) { return d.asn || d.prefix; });
+    }
+
+    function newData(json) {
+        // get the updated node
+        var updateNode = json.nodes[0];
+
+        // return the origin node that will be updated
+        var tmp = nodes.filter(function (d) {
+            return (d.asn === updateNode.asn);
+        });
+        var tmp2 = totalNodes.filter(function (d) {     // origin graph with total nodes
+            return (d.asn === updateNode.asn);
+        });
+
+        var nodeToUpdate = tmp[0];
+
+        // check whether the update is an 'announcement'
+        if (updateNode.type == "announcement") {
+            // add new 'prefix' that the already existing AS reaches with specific 'path'
+            nodeToUpdate.path.push(updateNode.path);
+            nodeToUpdate.reaches.push(updateNode.prefix[0]);
+
+            // get the index of the last element in 'path'
+            var lastASIndex = updateNode.path.length-1;
+
+            // return the origin node that will receive a new prefix
+            var tmp3 = nodes.filter(function (d) {
+                return d.asn == updateNode.path[lastASIndex];
+            });
+            var tmp4 = totalNodes.filter(function (d) {
+                return d.asn == updateNode.path[lastASIndex];
+            });
+
+            var nodeWithNewPrefix = tmp3[0];
+            var nodeWithNewPrefix2 = tmp4[0];
+
+            // add new node and new link to the graph
+            var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+            links.push({source: nodeWithNewPrefix, target: nodes[newNode-1]});
+            var newNode2 = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
+            totalLinks.push({source: nodeWithNewPrefix2, target: totalNodes[newNode2-1]});
+        }
+
+        update();
+    }
+
+    function displayCompleteGraph() {
+        var tmp = totalNodes.filter(function (d) {
+            return d;
+        });
+        var tmp2 = totalLinks.filter(function (d) {
+            return d;
+        });
+
+        nodes = tmp;
+        links = tmp2;
+
+        update();
+    }
+
+    function updateFromJSONFile() {
+        d3.json("updateAnnounce.json", function(json) {
+            newData(json);
+        });
+    }
+
+    function filterByInput() {
+        // get input from text field
+        var input_asn = document.getElementById('txtField_asn').value;
+        var input_prefix = document.getElementById('txtField_prefix').value;
+
+        // check whether input is not empty
+        if (input_asn == "" && input_prefix == "") {
+            alert("Please enter an AS number and a prefix!");
+        }
+        else if (input_asn == "") {
+            alert("Please enter an AS number!");
+        }
+        else if (input_prefix == "") {
+            alert("Please enter a prefix!");
+        }
+        else
+            updateGraphByASFilter(input_asn, input_prefix);
+    }
+
+    function updateGraphByASFilter(aASNumber, aPrefix) {
+        // get the node that the user typed in as 'AS number'
+        var tmp = nodes.filter(function (d) {
+            return d.asn == aASNumber;
+        });
+
+        var filtered_asn = tmp[0];
+
+        // check whether 'input_asn' reaches 'input_prefix'
+        // if no, nothing will be filtered
+        if (filtered_asn.reaches != null) {
+            var isPrefixExisting = false;
+            filtered_asn.reaches.forEach(function (d) {
+                if (d == aPrefix)
+                    isPrefixExisting = true;
+            })
+            if (!isPrefixExisting) {
+                alert("AS " + "'" + aASNumber + "'" + " does not reach prefix " + "'" + aPrefix + "'" + ".");
+                return;
+            }
+        }
+        else {
+            alert("AS " + "'" + aASNumber + "'" + " does not reach prefix " + "'" + aPrefix + "'" + ".");
+            return;
+        }
+
+        var tmp2 = [],
+            uniqueFilteredNodes = [];
+
+        // 'filtered_asn' needs to have a 'path'
+        if (filtered_asn.path != null) {
+            // iterate through each prefix in 'reaches'
+            for (var i = 0; i < filtered_asn.reaches.length; i++) {
+                // check whether 'prefix' matches with 'input_prefix'
+                if (filtered_asn.reaches[i] == aPrefix) {
+                    // get the index of the last element in 'path[i]'
+                    var lastIndexOfPath = filtered_asn.path[i].length-1;
+
+                    // get the nodes that will be displayed after filtering
+                    nodes.filter(function (o) {
+                        // push all nodes (asn`s) that matches to 'filtered_asn.path[i]'
+                        if (filtered_asn.path[i].indexOf(o.asn) != -1) {
+                            tmp2.push(o);
+                        }
+                        // push the prefix (as a node) that matches:
+                        // --> to the last node in 'filtered_asn.path[i]' AND to 'aPrefix'
+                        else if ((o.parent == filtered_asn.path[i][lastIndexOfPath]) &&
+                                 (o.prefix[0] == aPrefix)) {
+                            tmp2.push(o);
+                        }
+                    });
+                }
+            };
+
+            // remove duplicates from 'tmp2'
+            tmp2.forEach(function (d) {
+                if (uniqueFilteredNodes.indexOf(d) == -1) {
+                    uniqueFilteredNodes.push(d);
+                }
+            })
+
+            // get the links that will be displayed after filtering
+            var filteredLinks = links.filter(function (l) {
+                if (uniqueFilteredNodes.indexOf(l.source) != -1 &&
+                    uniqueFilteredNodes.indexOf(l.target) != -1) {
+                    return l;
+                }
+            });
+
+            nodes = uniqueFilteredNodes;
+            links = filteredLinks;
+
+            update();
+        }
+    }
+    
+    function tick() {
+        node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+             
+        path.attr("x1", function(d) { return d.source.x; })
+            .attr("y1", function(d) { return d.source.y; })
+            .attr("x2", function(d) { return d.target.x; })
+            .attr("y2", function(d) { return d.target.y; });
+
+        text.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+    }
+
+    </script>
+    </body>
+</html>
