@@ -1,14 +1,10 @@
 {
 	"nodes": [
         {
-            "asn": "E",
-            "prefix": ["2.92.134.0/24"],
-            "type": "Announcement"
-        },
-        {
-            "asn": "D",
-            "prefix": ["2.92.134.0/24"],
-            "type": "Withdraw"
+            "asn": "65001",
+            "prefix": ["160.45.144.0/26"],
+            "type": "announcement",
+            "path": ["65001", "65002", "65005"]
         }
     ]
 }
