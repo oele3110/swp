@@ -31,6 +31,8 @@ import fileinput
 import threading
 import Queue
 
+putBool = False
+
 class BroadcastServerProtocol(WebSocketServerProtocol):
 
    def onOpen(self):
@@ -64,6 +66,11 @@ class BroadcastServerFactory(WebSocketServerFactory):
 		reactor.callLater(2, self.tick)
 
 	def register(self, client):
+		# if this bool is true, then the queue is filled
+		# becomes true, when a client is registered
+		global putBool
+		putBool = True
+
 		if not client in self.clients:
 			print("registered client {}".format(client.peer))
 			self.clients.append(client)
@@ -72,6 +79,12 @@ class BroadcastServerFactory(WebSocketServerFactory):
 		if client in self.clients:
 			print("unregistered client {}".format(client.peer))
 			self.clients.remove(client)
+
+		# set bool to false, so that queue is not filled anymore and is cleared
+		if len(self.clients) == 0:
+			global putBool
+			putBool = False
+			MyFileinputReader.queue.queue.clear()
 
 	def broadcast(self, msg):
 		#print("broadcasting message '{}' ..".format(msg))
@@ -107,7 +120,9 @@ class MyFileinputReader(threading.Thread):
 
 	def run(self):
 		for line in fileinput.input():
-			MyFileinputReader.queue.put(line)
+			global putBool
+			if putBool:
+				MyFileinputReader.queue.put(line)
 			"""
 			if MyFileinputReader.queue.qsize() % 500 == 0:
 			print "Queue entries: " + str(MyFileinputReader.queue.qsize()) + "\nclear queue"
@@ -130,7 +145,7 @@ if __name__ == '__main__':
 	ServerFactory = BroadcastServerFactory
 	#ServerFactory = BroadcastPreparedServerFactory
 
-	factory = ServerFactory("ws://localhost:5002",
+	factory = ServerFactory("ws://localhost:5003",
 	                       debug = debug,
 	                       debugCodePaths = debug)
 
@@ -140,6 +155,6 @@ if __name__ == '__main__':
 
 	webdir = File(".")
 	web = Site(webdir)
-	reactor.listenTCP(8080, web)
+	reactor.listenTCP(8081, web)
 
 	reactor.run()
