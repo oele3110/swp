@@ -40,6 +40,10 @@
     <div id="update">
         <input name="updateButton" type="button" value="Prefix hijack" onclick="updateFromJSONFile()"/>
     </div>
+    <!-- websocket button -->
+    <div id="websocket_update">
+        <input name="webSocketButton" type="button" value="Listen on websocket" onclick="newWebsocket()"/>
+    </div>
     <!-- text fields -->
     <input type="text" id="txtField_asn" placeholder="Enter an AS number" value="65001"/>
     <input type="text" id="txtField_prefix" placeholder="Enter a prefix" value="160.45.144.0/26"/>
@@ -48,6 +52,35 @@
     </br>   <!-- make a line break -->
     
     <script>
+
+    // websockets -------------------------------------
+    function newWebsocket() {
+
+        var connection = new WebSocket('ws://tanger.imp.fu-berlin.de:5002');
+       
+        // When the connection is open, send some data to the server
+        connection.onopen = function ()
+        {
+            console.log('OPEN');
+        };
+       
+        // Log errors
+        connection.onerror = function (error)
+        {
+            console.log('WebSocket Error ' + error);
+        };
+       
+        // Log messages from the server
+        connection.onmessage = function (e)
+        {
+            console.log("update graph...");
+
+            // parse string to json object
+            json = JSON.parse(e.data)
+            newData(json);
+        };
+    }
+    //-------------------------------------------------
 
     var width = 960,
         height = 450;
@@ -184,10 +217,7 @@
         var updateNode = json.nodes[0];
 
         // return the origin node that will be updated
-        var tmp = nodes.filter(function (d) {
-            return (d.asn === updateNode.asn);
-        });
-        var tmp2 = totalNodes.filter(function (d) {     // origin graph with total nodes
+        var tmp = totalNodes.filter(function (d) {     // 'complete graph' with total nodes
             return (d.asn === updateNode.asn);
         });
 
@@ -203,45 +233,45 @@
             var lastASIndex = updateNode.path.length-1;
 
             // return the origin node that will receive a new prefix
-            var tmp3 = nodes.filter(function (d) {
+            var tmp2 = nodes.filter(function (d) {
                 return d.asn == updateNode.path[lastASIndex];
             });
-            var tmp4 = totalNodes.filter(function (d) {
+            var tmp3 = totalNodes.filter(function (d) {
                 return d.asn == updateNode.path[lastASIndex];
             });
 
-            // tmp3 is empty, which means:
+            var input_asn = document.getElementById('txtField_asn').value;
+            var nodeWithNewPrefix = tmp3[0];
+
+            // tmp2 is empty AND the 'announcement' is intended for the filtered AS (='input_asn'), which means:
             // the last node of 'updateNode.path' does not exist in filtered graph, yet
-            if (tmp3.length == 0) {
+            if ((tmp2.length == 0) && (updateNode.asn == input_asn)) {
                 // return 'source' node of missing node
                 var missingSource = nodes.filter(function (d) {
                     return d.asn == updateNode.path[lastASIndex-1];
                 });
 
-                // the missing node is tmp4[0]
-                var newNode = nodes.push(tmp4[0]);
+                // the missing node is tmp3[0]
+                var newNode = nodes.push(tmp3[0]);
                 links.push({source: missingSource[0], target: nodes[newNode-1]});
 
-                var nodeWithNewPrefix = tmp4[0];
-                
                 // add new prefix as node and new link to the filtered graph
-                var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
-                links.push({source: nodeWithNewPrefix, target: nodes[newNode-1]});
-                // add new prefix as node and new link to 'complete graph'
-                var newNode2 = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
-                totalLinks.push({source: nodeWithNewPrefix, target: totalNodes[newNode2-1]});
+                var newNode2 = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+                links.push({source: nodeWithNewPrefix, target: nodes[newNode2-1]});
             }
+            // the 'announcement' is intended for the filtered AS (='input_asn'), which means:
             // the last node of 'updateNode.path' does already exist in filtered graph
-            else {
-                var nodeWithNewPrefix = tmp3[0];
-                var nodeWithNewPrefix2 = tmp4[0];
+            else if (updateNode.asn == input_asn) {
+                var nodeWithNewPrefix2 = tmp2[0];
 
                 // add new node and new link to the graph
-                var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
-                links.push({source: nodeWithNewPrefix, target: nodes[newNode-1]});
-                var newNode2 = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
-                totalLinks.push({source: nodeWithNewPrefix2, target: totalNodes[newNode2-1]});
+                var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
+                links.push({source: nodeWithNewPrefix2, target: nodes[newNode-1]});
             }
+
+            // add new prefix as node and new link to 'complete graph'
+            var newNode = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+            totalLinks.push({source: nodeWithNewPrefix, target: totalNodes[newNode-1]});
         }
 
         update();
