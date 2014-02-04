@@ -172,7 +172,7 @@
             })
             .attr("y", ".31em")
             .style("opacity", 0)
-            .transition().duration(3000)
+            .transition().duration(2000)
             .style("opacity", 1);
         text.exit().remove();
         text
@@ -210,14 +210,38 @@
                 return d.asn == updateNode.path[lastASIndex];
             });
 
-            var nodeWithNewPrefix = tmp3[0];
-            var nodeWithNewPrefix2 = tmp4[0];
+            // tmp3 is empty, which means:
+            // the last node of 'updateNode.path' does not exist in filtered graph, yet
+            if (tmp3.length == 0) {
+                // return 'source' node of missing node
+                var missingSource = nodes.filter(function (d) {
+                    return d.asn == updateNode.path[lastASIndex-1];
+                });
 
-            // add new node and new link to the graph
-            var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
-            links.push({source: nodeWithNewPrefix, target: nodes[newNode-1]});
-            var newNode2 = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
-            totalLinks.push({source: nodeWithNewPrefix2, target: totalNodes[newNode2-1]});
+                // the missing node is tmp4[0]
+                var newNode = nodes.push(tmp4[0]);
+                links.push({source: missingSource[0], target: nodes[newNode-1]});
+
+                var nodeWithNewPrefix = tmp4[0];
+                
+                // add new prefix as node and new link to the filtered graph
+                var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+                links.push({source: nodeWithNewPrefix, target: nodes[newNode-1]});
+                // add new prefix as node and new link to 'complete graph'
+                var newNode2 = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+                totalLinks.push({source: nodeWithNewPrefix, target: totalNodes[newNode2-1]});
+            }
+            // the last node of 'updateNode.path' does already exist in filtered graph
+            else {
+                var nodeWithNewPrefix = tmp3[0];
+                var nodeWithNewPrefix2 = tmp4[0];
+
+                // add new node and new link to the graph
+                var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+                links.push({source: nodeWithNewPrefix, target: nodes[newNode-1]});
+                var newNode2 = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
+                totalLinks.push({source: nodeWithNewPrefix2, target: totalNodes[newNode2-1]});
+            }
         }
 
         update();
