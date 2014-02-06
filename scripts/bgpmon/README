@@ -1,9 +1,15 @@
 
 run like this
 
-python bgpmonParser.py -u -w -f json | python broadcastServer.py
+for local use:
+	sudo python logReader.py | python broadcastServer.py
 
-parameter:
+
+
+for use in real internet:
+	python bgpmonParser.py -u -w -f json | python broadcastServer.py
+
+parameter bgpmonParser.py:
 	-u 		announcements
 	-w 		withdrawals
 	-f 		dataOutputFormat
