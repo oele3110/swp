@@ -23,7 +23,7 @@ def bulk(oid):
 				errorIndex and varBinds[-1][int(errorIndex)-1] or '?')
 			)
 		else:
-			file  = open('./html/data.csv', "w")
+			file  = open('../../html/controller/data.csv', "w")
 			writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 			writer.writerow(["OID","Value"])	
 
@@ -33,7 +33,7 @@ def bulk(oid):
 
 			file.close()
 
-#snmp get
+#snmp get to csv
 def get(oid):
 	errorIndication, errorStatus, errorIndex, varBinds = cmdgen.CommandGenerator().getCmd(
 		cmdgen.CommunityData('public'),
@@ -49,7 +49,7 @@ def get(oid):
 				errorIndex and varBinds[int(errorIndex)-1] or '?')
 			)
 		else:
-			file  = open('./html/data.csv', "w")
+			file  = open('../../html/controller/data.csv', "w")
 			writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 			writer.writerow(["OID","Value"])	
 
@@ -57,6 +57,25 @@ def get(oid):
 				writer.writerow([name.prettyPrint(), val.prettyPrint()])
 
 			file.close()
+
+#snmp get to string
+def get_string(oid):
+	errorIndication, errorStatus, errorIndex, varBinds = cmdgen.CommandGenerator().getCmd(
+		cmdgen.CommunityData('public'),
+		cmdgen.UdpTransportTarget(('localhost','161')),
+		oid
+	)
+	if errorIndication:
+		print(errorIndication)
+	else:
+		if errorStatus:
+			print('%s at %s' % (
+				errorStatus.prettyPrint(),
+				errorIndex and varBinds[int(errorIndex)-1] or '?')
+			)
+		else:
+			for name, val in varBinds:
+				return [name.prettyPrint(), val.prettyPrint()]
 
 #snmp set
 def set(oid, value):
@@ -74,7 +93,7 @@ def set(oid, value):
 				errorIndex and varBinds[int(errorIndex)-1] or '?')
 			)
 		else:
-			file  = open('./html/data.csv', "w")
+			file  = open('../../html/controller/data.csv', "w")
 			writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 			writer.writerow(["OID","Value"])	
 
@@ -102,7 +121,7 @@ def walk(oid):
 				errorIndex and varBinds[int(errorIndex)-1] or '?')
 			)
 		else:
-			file  = open('./html/data.csv', "w")
+			file  = open('../../html/controller/data.csv', "w")
 			writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
 			writer.writerow(["OID","Value"])	
 	

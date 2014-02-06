@@ -7,9 +7,11 @@ from bottle import redirect, request, route, run, static_file, template
 import sys, os
 sys.path.append(os.getcwd())
 import snmp_agent
+import parser
 
 import subprocess
 import re
+import csv
 
 def get_vars():
 	host = 'localhost'
@@ -46,6 +48,9 @@ def do_bulk_oid():
 
 #snmp get
 @route('/')
+def index():
+	redirect("/demo.html")
+
 @route('/get')
 def get_oid():
 	return """<p><form action="/get" method="post">
@@ -65,6 +70,10 @@ def set_oid():
 	return """<p><form action="/set" method="post">
 		<input type=radio name=op value=add checked> Add Prefix<br/>
 		<input type=radio name=op value=del/> Del Prefix<br/>	
+		ASN:</br>
+		<input name="asn" type=text/><br/>
+		Port:</br>
+		<input name="port" type=text/><br/>
 		IP:</br>
 		<input name="ip" type=text/><br/>
 		Length:</br>
@@ -72,34 +81,45 @@ def set_oid():
 		<input name="Submit" type="submit"/>
 		</form>"""
 
+
 # add ip prefix
-# snmpset private 1.3.6.1.4.1.8072.2.264.ip-address int_prefix
+# snmpset private 1.3.6.1.4.1.8072.2.264.ip-address length
 # remove ip prefix
-# snmpset private 1.3.6.1.4.1.8072.2.265.ip-address int_prefix
+# snmpset private 1.3.6.1.4.1.8072.2.265.ip-address length
 
 @route('/set', method='POST')
 def do_set_oid():
+	#not possible because of missing type definition
+	#snmp_agent.set(oid+ip, length)
+	#redirect("/table.html")
+
 	op = request.forms.get('op')
 
 	if op == 'add':
-		oid = '.1.3.6.1.4.1.8072.2.264.'
+		oid = '.1.3.6.1.4.1.8072.2.264'
 	else:		
-		oid = '.1.3.6.1.4.1.8072.2.265.'
+		oid = '.1.3.6.1.4.1.8072.2.265'
 	
 	ip = request.forms.get('ip')
 	length = request.forms.get('val')
-	
-	#snmp_agent.set(oid+ip, length)
-	command = "snmpset -v 2c -c private localhost "+oid+ip+" i "+length
+	_asn = request.forms.get('asn')
+	_port = request.forms.get('port')
+
+	command = "snmpset -v 2c -c private localhost "+oid+"."+_asn+"."+_port+"."+ip+" i "+length
 	process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=None, shell=True)
 		
-	#redirect("/table.html")
 	output = process.communicate()
 	
 	regex="(.+\.\d+)\.(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s\=\sINTEGER\:\s(\d{1,2})"
 	result = re.match(regex, output[0]) 
-	
-	return "oid: "+result.group(1)+" ip: "+result.group(2)+"/"+result.group(3)
+
+	file  = open('../../html/controller/data.csv', "w")
+	writer = csv.writer(file, delimiter=',', quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
+	writer.writerow(["OID","Value"])
+	writer.writerow([result.group(1),result.group(2)+"/"+result.group(3)])
+	file.close()
+
+	redirect("/table.html")
 
 #snmp walk
 @route('/walk')
@@ -116,27 +136,58 @@ def do_walk_oid():
 	snmp_agent.walk(request.forms.get('oid'))
 	redirect("/table.html")
 
-@route('/config')
-def config():
+@route('/mrt')
+def get_mrt():
 	return """<p><form action="/config" method="post">
-		<table>
-		  <tr>
-		    <td>
-		      <textarea name=attacker cols=50 rows=10></textarea>
-		    </td>
-		    <td>
-		      <textarea name=target cols=50 rows=10></textarea>
-		    </td>
-		  <tr><td><input name=Submit type=submit></td></tr>
-		  </tr>
-		</table>
+		      <textarea name=mrt cols=100 rows=15></textarea><br/>
+		      <input name="Submit" type="submit">
 		</form></p>"""
 
-#@route('/config', method='POST')
-#def change():
-	
-	
+@route('/mrt', method='POST')
+def parse_mrt():
+	parser.string_to_json(request.forms.get('mrt'))
+	redirect("/demo.html")
 
+@route('/attacker')
+def get_attacker():
+	return """<p>ASN | IP | SNMP_VERSION | PORT | COMMUNITY | PASSWORD<br/>
+			<form action="/attacker" method="post">
+			<textarea name=atr cols=100 rows=15></textarea><br/>
+			<input name="Submit" type="submit">
+		</form></p>"""
+
+@route('/attacker', method='POST')
+def parse_attacker():
+	return "parsing attacker: "+request.forms.get('atr')
+	
+@route('/demo/get', method='POST')
+def demo_get():
+	response = snmp_agent.get_string(request.forms.get('oid'))
+	return response[1][:-2]
+
+@route('/demo/set', method='POST')
+def demo_set():
+	#not possible because of missing type definition
+	#snmp_agent.set(oid+ip, length)
+	#redirect("/table.html")
+
+	op = request.forms.get('op')
+	if op == 'add':
+		oid = '.1.3.6.1.4.1.8072.2.264'
+	else:		
+		oid = '.1.3.6.1.4.1.8072.2.265'
+	ip = request.forms.get('ip')
+	length = request.forms.get('val')
+	_asn = request.forms.get('asn')
+	_port = request.forms.get('port')
+
+	command = "snmpset -v 2c -c private localhost "+oid+"."+_asn+"."+_port+"."+ip+" i "+length
+	process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=None, shell=True)
+	
+	output = process.communicate()
+	
+	regex="(.+\.\d+)\.(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})\s\=\sINTEGER\:\s(\d{1,2})"
+	result = re.match(regex, output[0]) 
 
 
 #starting server
