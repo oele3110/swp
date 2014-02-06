@@ -3,6 +3,7 @@ import fileinput
 import threading
 import re
 import time
+import sys
 
 
 class MyFileinputReader(threading.Thread):
@@ -29,7 +30,8 @@ class MyFileinputReader(threading.Thread):
 
 		for line in loglines:
 
-			print line
+			#print line
+			#sys.stdout.flush()
 
 			resultUpdate = re.match(regexUpdate, line)
 			resultUpdatePrefix = re.match(regexUpdatePrefix, line)
@@ -46,6 +48,7 @@ class MyFileinputReader(threading.Thread):
 			if prefixA and pathA:
 				output = "{ \"nodes\": [ { \"asn\": \""+self.asn+"\", \"prefix\": [\""+prefixA+"\"], \"type\": \"announcement\", \"path\": [ "+pathA+" ] } ] }\r\n"
 				print output
+				sys.stdout.flush()
 				prefixA = None
 				pathA = None
 
@@ -54,6 +57,7 @@ class MyFileinputReader(threading.Thread):
 				prefixW = resultWithdrawn.group(2)
 				output = "{ \"nodes\": [ { \"asn\": \""+self.asn+"\", \"prefix\": [\""+prefixW+"\"], \"type\": \"withdraw\", \"path\": [  ] } ] }\r\n"
 				print output
+				sys.stdout.flush()
 				prefixW = None
 
 
@@ -89,6 +93,15 @@ if __name__ == '__main__':
 	thread5.start()
 	thread6.start()
 	thread7.start()
+
+
+	thread1.join()
+	thread2.join()
+	thread3.join()
+	thread4.join()
+	thread5.join()
+	thread6.join()
+	thread7.join()
 
 
 
