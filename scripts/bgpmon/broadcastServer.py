@@ -88,10 +88,11 @@ class BroadcastServerFactory(WebSocketServerFactory):
 
 	def broadcast(self, msg):
 		#print("broadcasting message '{}' ..".format(msg))
-		print "Queue size: " + str(MyFileinputReader.queue.qsize())
+		#print "Queue size: " + str(MyFileinputReader.queue.qsize())
 		if len(self.clients) > 0:
-			for i in range(0,MyFileinputReader.queue.qsize()/2):
+			for i in range(0,MyFileinputReader.queue.qsize()):
 				message = MyFileinputReader.queue.get()
+				print message
 				for c in self.clients:
 					c.sendMessage(message.encode('utf8'))
 					#print("message sent to {}".format(c.peer))
@@ -119,10 +120,21 @@ class MyFileinputReader(threading.Thread):
 		threading.Thread.__init__(self)
 
 	def run(self):
-		for line in fileinput.input():
+
+		while True:
+			line = sys.stdin.readline().split("\n")[0]
+
 			global putBool
 			if putBool:
 				MyFileinputReader.queue.put(line)
+
+			"""
+			for line in fileinput.input():
+				#print line
+				global putBool
+				if putBool:
+					MyFileinputReader.queue.put(line)
+			"""
 			"""
 			if MyFileinputReader.queue.qsize() % 500 == 0:
 			print "Queue entries: " + str(MyFileinputReader.queue.qsize()) + "\nclear queue"
@@ -145,7 +157,7 @@ if __name__ == '__main__':
 	ServerFactory = BroadcastServerFactory
 	#ServerFactory = BroadcastPreparedServerFactory
 
-	factory = ServerFactory("ws://localhost:5003",
+	factory = ServerFactory("ws://localhost:5002",
 	                       debug = debug,
 	                       debugCodePaths = debug)
 
@@ -155,6 +167,6 @@ if __name__ == '__main__':
 
 	webdir = File(".")
 	web = Site(webdir)
-	reactor.listenTCP(8081, web)
+	reactor.listenTCP(8080, web)
 
 	reactor.run()
