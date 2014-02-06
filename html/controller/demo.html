@@ -1,13 +1,14 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        <meta charset="utf-8">
-        <title>Force Layout</title>
-    </head>
+	<head>
+		<meta charset="utf-8">
+		<title>Force Layout</title>
+	</head>
+	<link rel="stylesheet" href="d3.slider.css"/>
 	<style>
 		circle {
 			stroke: #fff;
-			stroke-width: 3px;
+			stroke-width: 1.5px;
 		}
 		text {
 			font-size: 20px;
@@ -16,6 +17,9 @@
 			pointer-events: none;
 			text-shadow: 0 1px 3px #000, 1px 0 3px #000, 0 -1px 3px #000, -1px 0 3px #000;
 			color:#ffffff;
+		}
+		text.slider-text {
+			font-size: 12px;
 		}
 		path.link {
 			fill: none;
@@ -31,7 +35,7 @@
 		}
 		div.tooltip {
 			position: absolute;
-			text-align: center;
+			text-align: left;
 			vertical-align: middle;
 			padding: 2px;
 			font: 20px 'Courier New';
@@ -69,33 +73,48 @@
 			position:relative;
 			top:1px;
 		}
+		th, td {
+			border-top-style: none;
+			border-right-style: solid;
+			border-right-width: 2px;
+			border-bottom-style: solid;
+			border-bottom-width: 2px;
+			border-left-style: none;
+		}
+		.wrapper {
+			position:absolute; 
+			width: 50px;
+			margin-left: auto;
+			margin-right: auto;
+		}
+		.wrapper > div {
+			margin: 0px 0;
+		}
 	</style>
-    <body>
-    <div align="center">
-    	<form name="choose" action="">
-    		<input type="text" name="asn" class="field" placeholder="ASN" onkeydown="return event.keyCode != 13;"/>
-    		<input type="button" value="click" class="field" onclick="button_click(document.choose.asn.value)" />
-    	</form>
-    </div>
+	<body>
+	<div align="center">
+		<form name="choose" action="">
+			<input type="text" name="asn" class="field" placeholder="enter ASN" onkeydown="if (event.keyCode == 13) {field_enter(document.choose.asn.value);return false;}"/>
+		</form>
+	</div>
 	<script type="text/javascript" src="http://d3js.org/d3.v3.min.js"></script>
+	<script src="d3.slider.js"></script>
 	<script type="text/javascript">
 		// set background color
 		document.body.style.backgroundColor = '#000';
-	</script>
-	<script type="text/javascript">
 
-		var width  = window.innerWidth-15,
-			height = window.innerHeight-15,
-		    padding = 100, // separation between nodes
-		    maxRadius = 50;
+		var width  = window.innerWidth-25,
+			height = window.innerHeight-50,
+			padding = 100, // separation between nodes
+			maxRadius = 50;
 
 		var n = 10, // total number of nodes
-		    m = 2; // number of distinct clusters
+			m = 2; // number of distinct clusters
 
 		// define attacker and target field
 		var x = d3.scale.ordinal()
-		    .domain(d3.range(m))
-		    .rangePoints([0, width], 1);
+			.domain(d3.range(m))
+			.rangePoints([0, width], 1);
 
 		var newSource = null,
 			newTarget = null;
@@ -107,15 +126,16 @@
 		// init force layout
 		var force = d3.layout.force()
 			.linkDistance(function (d) { return d.source.attacker ? x(1)-x(0)-125 : 125  } )
-		    .size([width, height])
-		    .gravity(0)
-		    .charge(function (d) { return node_charge(d)} )
-		    .on("tick", tick);
+			.size([width, height])
+			.gravity(0)
+			.charge(function (d) { return node_charge(d)} )
+			.on("tick", tick);
 
 		// add svg
 		var svg = d3.select("body")
 			.append("svg")
-		    .attr("width", width)
+			.attr("width", width)
+			.attr("height", height);
 
 		// build arrow header of links
 		svg.append('svg:defs').append('svg:marker')
@@ -143,7 +163,7 @@
 		// define tooltip
 		var div = d3.select("body")
 			.append("div")
-		    .attr("class", "tooltip")
+			.attr("class", "tooltip")
 			.style("opacity", 0);
 
 		// selection of links
@@ -152,40 +172,43 @@
 
 		// selection of nodes
 		var circle = svg.selectAll("circle")
-		    .data(nodes);
+			.data(nodes);
 
 		// selection of labels
 		var text = svg.selectAll("text")
-		    .data(nodes);
+			.data(nodes);
 
-		// get nodes from json
+		// get nodes from json    graph.json
 		d3.json("graph.json", function(error, graph) {
 			graph.nodes.forEach(function(item) {
 				if(item.prefix) {
-                    nodes.push({
-                        asn: item.asn,
-                        port: item.port,
-                        attacker: item.attacker ? true : false,
-                        prefix: item.prefix,
-                        cx: item.attacker ? x(0) : x(1),
-                        cy: height / 2
-                    });
-                } else {
-                    nodes.push({
-                        asn: item.asn,
-                        port: item.port,
-                        attacker: item.attacker ? true : false,
-                        cx: item.attacker ? x(0) : x(1),
-                        cy: height / 2
-                    });
-                }
+					nodes.push({
+						asn: item.asn,
+						port: item.port,
+						attacker: item.attacker ? true : false,
+						prefix: item.prefix,
+						cx: item.attacker ? x(0) : x(1),
+						cy: height / 2
+					});
+				} else {
+					nodes.push({
+						asn: item.asn,
+						port: item.port,
+						attacker: item.attacker ? true : false,
+						cx: item.attacker ? x(0) : x(1),
+						cy: height / 2
+					});
+				}
 				circle = svg.selectAll("circle")
-					.data(nodes);
+				.data(nodes);
 				text = svg.selectAll("text")
-		    		.data(nodes);
+				.data(nodes);
 				update();
 			});
 		});
+		
+		// start force layout
+		force.start();
 
 		function update() {
 			// add new data to force
@@ -198,14 +221,17 @@
 				.links(links)
 				.start();
 			// enter nodes
-			circle.enter().append("circle")
-				.style("fill", function (d) { return d.attacker ? "#d62728" : "#17becf" } )
+			text.enter().append("text")
+				.style("fill","white");
+			circle.enter().insert("circle","text")
+				.attr("r", 0)
+				.style("fill", function (d) { return d.attacker ? "#d62728" : "#e9d818" } )
 				.on("click", node_click)
 				.on("mouseover", function (d) {
 						if(d.attacker) {
 							div.transition()
 								.duration(200)
-								.style("opacity", .75);
+								.style("opacity", .80);
 							div.html(tip_text(d))
 								.style("color", "white")
 								.style("left", d.x + "px")
@@ -218,44 +244,46 @@
 						.style("opacity", 0);
 				})
 				.call(force.drag);
-			text.enter().append("text")
-				.attr("x", 15)
-				.attr("y", -15)
-				.text(function(d) { return d.asn ? d.asn : d.prefix; })
-				.style("fill","white");
 			// enter links
 			path.enter().insert("path", "circle")
+				.attr("opacity", 0)
 				.attr("class", function (d) { return d.hijack ? "hijack" : "link" } )
 				.attr("marker-end", arrow)
-				.on("click", link_click);
+				.on("click", link_click)
+				.transition()
+				.duration(500)
+				.attr("opacity", 1);
 			// update nodes
 			circle.transition()
+				.duration(500)
 				.attr("r", function (d) { return node_size(d)});
+			text.transition()
+				.text(function(d) { return d.asn ? d.asn : d.prefix; })
+				.duration(500)
+				.attr("x", function (d) { return d.attacker || d.displays ? -30 : 15; })
+				.attr("y", function (d) { return d.attacker || d.displays ? 8 : -15; });
 			// update links
 			path.attr("class", function (d) { return d.hijack ? "hijack" : "link" } )
 				.attr("marker-end", arrow);
 			// remove nodes
-			circle.exit().remove();
-			text.exit().remove();
+			text.exit().transition().duration(500).attr("opacity", 0).remove();
+			circle.exit().transition().duration(500).attr("r",0).remove();
 			// remove links
-			path.exit().remove();
+			path.exit().transition().duration(500).attr("opacity", 0).remove();
+
+
+			update_slider();
 		}
 
 		function tip_text(d) {
-			if(d.attacker) {
-				// get announced prefixes
-				var request = new XMLHttpRequest();
-				request.open("POST", "/demo/get", false);
-				request.send("oid=1.3.6.1.4.1.8072.2.269."+d.asn+"."+d.port);
-				if(request.readyState == 4) {
-					return request.responseText.split("\\n").join("<br/>");
-				} 
-			} else {
-				if(d.asn) {
-					return 'AS'+d.asn;
-				} else {
-					return d.prefix;
-				}
+			// get announced prefixes
+			var request = new XMLHttpRequest();
+			request.open("POST", "/demo/get", false);
+			request.send("oid=1.3.6.1.4.1.8072.2.267."+d.asn+"."+d.port);
+			if(request.readyState == 4) {
+				head = "<table cellspacing=\"4\" cellpadding=\"2\"><tr><th></th><th>network</th><th>next hop</th><th>path</th></tr><tr><td>";
+				end = "</td></tr></table>";
+				return head+(request.responseText.split("\\t").join("</td><td>")).split("\\n").join("</td></tr><tr><td>")+end;
 			}
 		}
 
@@ -286,7 +314,7 @@
 		function node_charge(d) {
 			if (d.attacker) return -2000;
 			if (d.parent) return -350;
-			return d.displays ? -4000 : -350;
+			return d.displays ? -3000 : -350;
 		}
 
 		// set label of node
@@ -297,57 +325,28 @@
 
 		// iteration of force layout
 		function tick(e) {
-            path.attr("d", function(d) {
-                var dx = d.target.x - d.source.x,
-                    dy = d.target.y - d.source.y,
-                    dr = 0;
-                return "M" +
-                    d.source.x + "," +
-                    d.source.y + "A" +
-                    dr + "," + dr + " 0 0,1 " +
-                    d.target.x + "," +
-                    d.target.y;
-            });
+			path.attr("d", function(d) {
+				var dx = d.target.x - d.source.x,
+					dy = d.target.y - d.source.y,
+					dr = 0;
+				return "M" +
+					d.source.x + "," +
+					d.source.y + "A" +
+					dr + "," + dr + " 0 0,1 " +
+					d.target.x + "," +
+					d.target.y;
+			});
 			circle.each(gravity(.2 * e.alpha))
-				.each(collide(.5))
 				.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 			text.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
 		}
 
 		// move nodes toward cluster focus
 		function gravity(alpha) {
-		  return function(d) {
-		    d.y += (d.cy - d.y) * alpha;
-		    d.x += (d.cx - d.x) * alpha;
-		  };
-		}
-
-		// resolve collisions between nodes
-		function collide(alpha) {
-		  var quadtree = d3.geom.quadtree(nodes);
-		  return function(d) {
-		    var r = d.radius + maxRadius + padding,
-		        nx1 = d.x - r,
-		        nx2 = d.x + r,
-		        ny1 = d.y - r,
-		        ny2 = d.y + r;
-		    quadtree.visit(function(quad, x1, y1, x2, y2) {
-		      if (quad.point && (quad.point !== d)) {
-		        var x = d.x - quad.point.x,
-		            y = d.y - quad.point.y,
-		            l = Math.sqrt(x * x + y * y),
-		            r = d.radius + quad.point.radius + (d.color !== quad.point.color) * padding;
-		        if (l < r) {
-		          l = (l - r) / l * alpha;
-		          d.x -= x *= l;
-		          d.y -= y *= l;
-		          quad.point.x += x;
-		          quad.point.y += y;
-		        }
-		      }
-		      return x1 > nx2 || x2 < nx1 || y1 > ny2 || y2 < ny1;
-		    });
-		  };
+			return function(d) {
+				d.y += (d.cy - d.y) * alpha;
+				d.x += (d.cx - d.x) * alpha;
+			};
 		}
 
 		// handle click on node
@@ -355,40 +354,45 @@
 			// target nodes
 			if ((d.asn !== undefined) && (d.prefix !== undefined) && !d.attacker) {
 				if (!d.displays) {
-                    // add prefix nodes
-                    d.prefix.forEach(function(item) {
-                        new_node_index = nodes.push({parent: d.asn, prefix: item, cx: d.cx, cy: d.cy});
-                        links.push({source: d, target: nodes[new_node_index-1]});
-                    });
-                    d.displays = true;
-                } else {
-                    // remove prefix nodes and its links
-                    delete_nodes = nodes.filter(function (item) {
-                        return (item.parent === d.asn);
-                    });
-                    nodes = nodes.filter(function (item) {
-                        return (item.parent !== d.asn);
-                    });
-                    links = links.filter(function (item) {
-                        return (delete_nodes.indexOf(item.target) == -1)
-                    });
-                    d.displays = false;
-                }
+					// add prefix nodes
+					d.prefix.forEach(function(item) {
+						new_node_index = nodes.push({parent: d.asn, prefix: item, cx: d.x, cy: d.y});
+						links.push({source: d, target: nodes[new_node_index-1]});
+					});
+					d.displays = true;
+				} else {
+					// remove prefix nodes and its links
+					delete_nodes = nodes.filter(function (item) {
+						return (item.parent === d.asn);
+					});
+					nodes = nodes.filter(function (item) {
+						return (item.parent !== d.asn);
+					});
+					deleted_links = links.filter(function (item) {
+						return (delete_nodes.indexOf(item.target) != -1)
+					});
+					links = links.filter(function (item) {
+						return (delete_nodes.indexOf(item.target) == -1)
+					});
+					// delete active announcements
+					deleted_links.forEach(function (d) {d.hijack && link_click(d)});
+					d.displays = false;
+				}
 			} 
 			// attacker nodes
 			if (d.attacker) {
 				newSource = d;
-            }
+			}
 			// prefix nodes
 			if (d.parent) {
-			    newTarget = d;
-            }
-            // add hijack links
-            if (newSource && newTarget) {
-            	 links.push({source: newSource, target: newTarget});
-            	 newSource = null;
-            	 newTarget = null;
-            }
+				newTarget = d;
+			}
+			// add hijack links
+			if (newSource && newTarget) {
+				 links.push({source: newSource, target: newTarget});
+				 newSource = null;
+				 newTarget = null;
+			}
 			update();
 		}
 
@@ -422,19 +426,91 @@
 		}
 
 		// handle hit on button like click on node
-		function button_click(asn) {
+		function field_enter(asn) {
 			if (!isNaN(asn)) {
 				// select node according to asn
 				selected_node = nodes.filter(function (item) {
-	            	return (item.asn === asn.toString());
-	            });
-	            // "click" on
-	            selected_node[0] && node_click(nodes[nodes.indexOf(selected_node[0])]);
+					return (item.asn === asn.toString());
+				});
+				// "click" on
+				selected_node[0] && node_click(nodes[nodes.indexOf(selected_node[0])]);
 			}
 		}
 
-		// start force layout
-		force.start();
-    </script>
+		// update slider
+		function update_slider() {
+			// remove all old sliders
+			d3.selectAll('slider').transition().remove();
+			svg.selectAll(".slider-text").remove();
+			// get links which need a slider
+			slider_links = links.filter(function (item) {
+				return (item.source.attacker) 
+			});
+			// create sliders
+			var top = 0;
+			var index = 0;
+			slider_links.forEach(function (d) {
+				index = parseInt(d.source.index+"00000"+d.target.index);
+				top += 50;
+				create_slider(index, (d.hijack ? index : -index), top, d.target.prefix);
+			});
+		}
+
+		// create slider for link interaction
+		function create_slider(index, val, top, label) {
+			// create slider
+			d3.select("body")
+				.append("slider")
+				.attr("class", "wrapper")
+				.style("position", "absolute")
+				.style("left", "50px")
+				.style("top", top+"px")
+				.call(d3.slider()
+					.min(-index)
+					.max(index)
+					.step(2*index)
+					.value(val)
+					.classed(val < 0 ? "d3-slider-handle" : "d3-slider-handle-red")
+					.on("slide", slide));
+			// create label of slider
+			svg.append('text')
+				.attr("class","slider-text")
+				.text(label)
+				.attr("fill", "#fff")
+				.attr("x", 15)
+				.attr("y", top);
+		}
+
+		// slide simulates click on link
+		function slide (evt, val) {
+			function startsWith(str, prefix) {
+				return str.lastIndexOf(prefix, 0) === 0;
+			}
+			function endsWith(str, suffix) {
+				return str.indexOf(suffix, str.length - suffix.length) !== -1;
+			}
+			// get right link
+			val = (val > 0 ? val : -1*val);
+			val = val.toString();
+			source_index = 0;
+			target_index = 0;
+			if (endsWith(val, "000000")) {
+				source_index = parseInt(val.substr(0,val.length-(1+6)));
+			}
+			if (startsWith(val, "000000")) {
+				target_index = parseInt(val.substr(6,val.length-1));
+			} 
+			else {
+				index = val.lastIndexOf("00000");
+				source_index = parseInt(val.substr(0,index));
+				target_index = parseInt(val.substr(index+5,val.length-1));
+			}
+			// "click" on
+			selected_link = links.filter(function (item) {
+				return (item.source.index==source_index && item.target.index==target_index);
+			});
+			selected_link[0] && link_click(links[links.indexOf(selected_link[0])]);
+		}
+	</script>
 	</body>
 </html>
