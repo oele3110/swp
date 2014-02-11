@@ -37,13 +37,15 @@
         <input name="complete_graph" type="button" value="Complete graph" onclick="displayCompleteGraph()"/>
     </div>
     <!-- load and update button -->
+    <!--
     <div id="update">
         <input name="updateButton" type="button" value="Prefix hijack" onclick="updateFromJSONFile()"/>
     </div>
-    <!-- websocket button -->
+    websocket button
     <div id="websocket_update">
         <input name="webSocketButton" type="button" value="Listen on websocket" onclick="newWebsocket()"/>
     </div>
+    -->
     <!-- text fields -->
     <input type="text" id="txtField_asn" placeholder="Enter an AS number" value="65001"/>
     <input type="text" id="txtField_prefix" placeholder="Enter a prefix" value="160.45.144.0/26"/>
@@ -54,7 +56,7 @@
     <script>
 
     // websockets -------------------------------------
-    function newWebsocket() {
+    // function newWebsocket() {
 
         var connection = new WebSocket('ws://tanger.imp.fu-berlin.de:5002');
        
@@ -75,15 +77,21 @@
         {
             console.log("update graph...");
 
-            // parse string to json object
-            json = JSON.parse(e.data)
-            newData(json);
+            // TODO:
+            // only parse, if update has no line break
+
+            if (e.data != "\n") {
+                // parse string to json object
+                json = JSON.parse(e.data)
+                newData(json);
+            };
+            
         };
-    }
+    // }
     //-------------------------------------------------
 
     var width = 960,
-        height = 450;
+        height = 550;
     
     var force = d3.layout.force()
         .charge(-500)
@@ -264,14 +272,106 @@
             else if (updateNode.asn == input_asn) {
                 var nodeWithNewPrefix2 = tmp2[0];
 
-                // add new node and new link to the graph
-                var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
-                links.push({source: nodeWithNewPrefix2, target: nodes[newNode-1]});
+                // check whether new prefix already exist at 'nodeWithNewPrefix2' (at 'filtered graph')
+                var newPrefixAsNodeNeeded = true;
+                nodes.filter(function (d) {
+                    // 'd' is a prefix and already exists in 'filtered graph'
+                    if (d.parent == nodeWithNewPrefix2.asn  && d.prefix[0] == updateNode.prefix[0]) {
+                        newPrefixAsNodeNeeded = false;
+                    }
+                })
+                if (newPrefixAsNodeNeeded) {
+                    // add new node and new link to the graph
+                    var newNode = nodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix2.asn});
+                    links.push({source: nodeWithNewPrefix2, target: nodes[newNode-1]});
+                };
             }
 
-            // add new prefix as node and new link to 'complete graph'
-            var newNode = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
-            totalLinks.push({source: nodeWithNewPrefix, target: totalNodes[newNode-1]});
+            // check whether new prefix already exist at 'nodeWithNewPrefix' (at 'complete graph')
+            var newPrefixAsNodeNeeded = true;
+            totalNodes.filter(function (d) {
+                // 'd' is a prefix and already exists in 'complete graph'
+                if (d.parent == nodeWithNewPrefix.asn  && d.prefix[0] == updateNode.prefix[0]) {
+                    newPrefixAsNodeNeeded = false;
+                }
+            })
+            if (newPrefixAsNodeNeeded) {
+                // add new prefix as node and new link to 'complete graph'
+                var newNode = totalNodes.push({prefix: updateNode.prefix, parent: nodeWithNewPrefix.asn});
+                totalLinks.push({source: nodeWithNewPrefix, target: totalNodes[newNode-1]});
+            };
+        }
+        else if (updateNode.type == "withdraw") {
+            var indexPath = [];
+            // get indexes in 'nodeToUpdate.path' that matches to 'updateNode.path'
+            for (var i = 0; i < nodeToUpdate.path.length; i++) {
+                if (nodeToUpdate.path[i].length == updateNode.path.length) {
+                    for (var j = 0; j < nodeToUpdate.path[i].length; j++) {
+                        if (nodeToUpdate.path[i][j] != updateNode.path[j]) {
+                            break;
+                        }
+                        else {
+                            // check whether we iterate through the complete 'nodeToUpdate.path[i]', which means:
+                            // only push i (=index), when we know both arrays are equal
+                            if (j == nodeToUpdate.path[i].length-1) {
+                                indexPath.push(i);
+                            }
+                        }
+                    };
+                }
+            };
+            // 'indexPath' is not empty
+            if (indexPath.length != 0) {
+                for (var i = indexPath.length; i > 0; i--) {
+                    if (nodeToUpdate.reaches[indexPath[i-1]] == updateNode.prefix[0]) { 
+                        // remove 'nodeToUpdate.path' and 'nodeToUpdate.reaches' that matches to 'updateNode.path' AND to 'updateNode.prefix'
+                        nodeToUpdate.path.splice(indexPath[i-1], 1);
+                        nodeToUpdate.reaches.splice(indexPath[i-1], 1);
+                    };
+                };
+            };
+
+            // check whether we have to remove the withdrawn-prefix (as a node) from the graph
+            var withdrawnPrefixStillExist = false;
+            totalNodes.filter(function (d) {
+                // iterate through all nodes that contain 'updateNode.prefix[0]' and are not a prefix (as a node)
+                if (d.parent == null && d.reaches.indexOf(updateNode.prefix[0]) != -1) {
+                    withdrawnPrefixStillExist = true;
+                }
+            })
+            // remove prefix as a node
+            if (!withdrawnPrefixStillExist) {
+                var allNewNodes = nodes.filter(function (d) {
+                    // 'd' is a node
+                    if (d.asn != null)
+                        return d;
+                    // 'd' is a prefix AND matches not to 'updateNode.prefix[0]'
+                    else if (d.parent != null && d.prefix[0] != updateNode.prefix[0])
+                        return d;
+                });
+
+                var allNewLinks = links.filter(function (d) {
+                    // 'target' is a node
+                    if (d.target.asn != null)
+                        return d;
+                    // 'target' is a prefix AND matches not to 'updateNode.prefix[0]'
+                    else if (d.target.prefix[0] != updateNode.prefix[0])
+                        return d;
+                });
+
+                // update 'complete graph'
+                var tmp = allNewNodes.filter(function (d) {
+                    return d;
+                });
+                var tmp2 = allNewLinks.filter(function (d) {
+                    return d;
+                });
+                totalNodes = tmp;
+                totalLinks = tmp2;
+                
+                nodes = allNewNodes;
+                links = allNewLinks;
+            }
         }
 
         update();
